@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+import argparse
 
 import torch
 import torch.nn as nn
@@ -39,6 +40,27 @@ emotion_table = {'neutral'  : 0,
 train_folders = ['FER2013Train']
 valid_folders = ['FER2013Valid']
 test_folders = ['FER2013Test']
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Progressive Neural Networks')
+    parser.add_argument('-faces_path', default='/imatge/isagastiberri//small_msra_123/', type=str, help='path to face data')
+    parser.add_argument('-fer_path', default='/imatge/isagastiberri/fer_plus/', type=str, help='path to fer')
+    parser.add_argument('-weights_path', default='/imatge/isagastiberri/progressivenet/imagenet_matconvnet_vgg_f_dag.pth', type=str, help='path to fer')
+
+    parser.add_argument('--faces_lr', dest='faces_lr', type=float, default=0.001, help='Optimizer learning rate for face network')
+    parser.add_argument('--fer_lr', dest='fer_lr', type=float, default=0.0015, help='Optimizer learning rate for emotion network')
+
+    parser.add_argument('--faces_step', dest='faces_step', type=int, default=10, help='scheduler step size for faces')
+    parser.add_argument('--fer_step', dest='fer_step', type=int, default=10, help='scheduler step size for emotion')
+
+    parser.add_argument('--faces_gamma', dest='faces_gamma', type=float, default=0.1, help='Scehduler gamma for faces')
+    parser.add_argument('--fer_gamma', dest='fer_gamma', type=float, default=0.1, help='Scehduler gamma for emotion')
+
+    parser.add_argument('--epochs', dest='epochs', type=int, default=15)
+
+    args = parser.parse_known_args()
+    return args[0]
 
 #training
 def train_model(num_tasks, models, dataloaders, dataset_sizes, criterion, optimizers, schedulers, epochs=15):
@@ -153,12 +175,12 @@ def train_model(num_tasks, models, dataloaders, dataset_sizes, criterion, optimi
     return models
 
 
-if __name__ == '__main__':
+def main(args):
 
     #load the dataset
     num_tasks = 2 #how many tasks do we have?
-    emotion_folder = '/imatge/isagastiberri/fer_plus/'
-    images_path = '/imatge/isagastiberri//small_msra_123/'
+    emotion_folder = args['fer_path']
+    images_path = args['faces_path']
     num_classes_emotion = len(emotion_table)
 
     msra_cfw_faceid_datasets = {x: msra.MSRA_CFW_FaceIDDataset(root_dir=images_path, mode=x, validation_folds=4, test_split=0.0) for x in ['train', 'val']}
@@ -193,7 +215,7 @@ if __name__ == '__main__':
     num_classes = [num_classes_face, num_classes_emotion]
 
     #load the model
-    weights_path = '/imatge/isagastiberri/progressivenet/imagenet_matconvnet_vgg_f_dag.pth'
+    weights_path = args['weights_path']
     models = []
     models_for_task = []
     for task in range(0, num_tasks):
@@ -205,12 +227,12 @@ if __name__ == '__main__':
             print(model_vggf)
         models.append(models_for_task)
 
-    optimizer_fer = optim.SGD(models[1][1].parameters(), lr=0.0015, momentum=0.9)
-    optimizer_faces = optim.SGD(models[0][0].parameters(), lr=0.001, momentum=0.9)
+    optimizer_fer = optim.SGD(models[1][1].parameters(), lr=args['fer_lr'], momentum=0.9)
+    optimizer_faces = optim.SGD(models[0][0].parameters(), lr=args['faces_lr'], momentum=0.9)
     optimizers_vggf = [optimizer_faces, optimizer_fer]
 
-    scheduler_faces = lr_scheduler.StepLR(optimizer_faces, step_size= 10, gamma=0.1)
-    scheduler_fer = lr_scheduler.StepLR(optimizer_fer, step_size= 10, gamma=0.1)
+    scheduler_faces = lr_scheduler.StepLR(optimizer_faces, step_size= args['faces_step'], gamma=args['faces_gamma'])
+    scheduler_fer = lr_scheduler.StepLR(optimizer_fer, step_size= args['fer_step'], gamma=args['fer_gamma'])
     schedulers_vggf = [scheduler_faces, scheduler_fer]
 
 
@@ -221,5 +243,7 @@ if __name__ == '__main__':
 
     criterion = nn.CrossEntropyLoss()
 
-    models = train_model(num_tasks, models, dataloaders, dataset_sizes, criterion, optimizers_vggf, schedulers_vggf, epochs=15)
+    models = train_model(num_tasks, models, dataloaders, dataset_sizes, criterion, optimizers_vggf, schedulers_vggf, epochs=args['epochs'])
 
+if __name__ == '__main__':
+    main(vars(get_args()))
