@@ -9,4 +9,8 @@ The databases we used were msra cfw https://www.microsoft.com/en-us/research/pro
 
 To use our code, you need to call progressive_net.py and add arguments, so you should write
 
-python progressive_net.py 'face_path' 'fer_path' 'weights_path' --faces_lr 0.001 --fer_lr 0.0015 --faces_step 10 --fer_step 10 --faces_gamma 0.1 --fer_gamma 0.1 --num_epochs 15
+python progressive_net.py 'path/to/face/database' 'path/to/fer/database' 'path/to/weights' --faces_lr 0.001 --fer_lr 0.0015 --faces_step 10 --fer_step 10 --faces_gamma 0.1 --fer_gamma 0.1 --num_epochs 15
+
+The values in the example are the default ones and the code is made to work with the databases that are linked above, if the database changes then ferplus_dataset.py, ferplus_reader.py and msra_cfw_faceid_loader.py should be changed.
+
+
